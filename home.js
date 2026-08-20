@@ -1,0 +1,1 @@
+window.Home={greeting(){const h=new Date().getHours();return h<11?"Selamat pagi":h<15?"Selamat siang":h<18?"Selamat sore":"Selamat malam"},clock(){const e=document.getElementById("clock");if(!e)return;e.textContent=new Date().toLocaleTimeString("id-ID",{hour12:false});setTimeout(()=>this.clock(),1000)}};
