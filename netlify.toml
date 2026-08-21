@@ -1,6 +1,21 @@
 [build]
-publish="."
+  publish = "."
+
 [[redirects]]
-from="/app"
-to="/app.html"
-status=200
+  from = "/app"
+  to = "/app.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/app/*"
+  to = "/app.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
