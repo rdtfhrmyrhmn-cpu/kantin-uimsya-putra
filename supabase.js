@@ -3,8 +3,8 @@
    JANGAN masukkan service_role key di frontend. */
 (function () {
   'use strict';
-  const SUPABASE_URL = 'https://caotqidtzccugtomtpsx.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_8o9BQgrJ62emURiuzXstTg_xkXOWJD3';
+  const SUPABASE_URL = 'https://rsqxayonxgakkguhhmbs.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_noofOwWCyBf0NvJcjIQtjg_4gaBFlbI';
 
   if (!window.supabase || typeof window.supabase.createClient !== 'function') {
     console.error('Supabase JS belum dimuat.');
