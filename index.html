@@ -1,1 +1,65 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login - Kantin Uimsya Putra</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase.js"></script></head><body class="login"><div class="card"><h1>Kantin Uimsya Putra</h1><p>Laporan Keuangan</p><form id="loginForm"><input id="username" placeholder="Username" required><input id="password" type="password" placeholder="Password" required><button>Masuk</button><div id="msg"></div></form></div><script>loginForm.onsubmit=async e=>{e.preventDefault();const u=username.value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,'');const r=await supabaseClient.auth.signInWithPassword({email:u+'@kantin-uimsya.local',password:password.value});if(r.error)msg.textContent='Login gagal: '+r.error.message;else location='app.html'}</script></body></html>
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#344c3d">
+  <title>Login - Kantin Uimsya Putra</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+</head>
+<body class="login">
+  <main class="card login-card">
+    <div class="brand">UP</div>
+    <h1>Kantin Uimsya Putra</h1>
+    <p class="muted">Laporan Keuangan</p>
+    <form id="loginForm" class="login-form">
+      <label>Username<input id="username" autocomplete="username" placeholder="Username" required></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Password" required></label>
+      <button type="submit">Masuk</button>
+      <div id="msg" role="alert"></div>
+    </form>
+  </main>
+  <script>
+    const loginForm = document.querySelector('#loginForm');
+    const msg = document.querySelector('#msg');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+
+      if (!window.supabaseClient) {
+        msg.textContent = 'Supabase belum dikonfigurasi. Isi URL dan publishable/anon key di supabase.js.';
+        return;
+      }
+
+      const username = document.querySelector('#username').value.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+      const password = document.querySelector('#password').value;
+
+      if (!username || !password) {
+        msg.textContent = 'Username dan password wajib diisi.';
+        return;
+      }
+
+      const button = loginForm.querySelector('button');
+      button.disabled = true;
+      button.textContent = 'Memproses...';
+
+      try {
+        const { error } = await supabaseClient.auth.signInWithPassword({
+          email: `${username}@kantin-uimsya.local`,
+          password
+        });
+        if (error) throw error;
+        location.href = 'app.html';
+      } catch (error) {
+        msg.textContent = `Login gagal: ${error.message || error}`;
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Masuk';
+      }
+    });
+  </script>
+</body>
+</html>
