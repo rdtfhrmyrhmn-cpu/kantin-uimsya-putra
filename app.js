@@ -1,37 +1,546 @@
-const P={home:'Beranda',transactions:'Transaksi',daily:'Laporan Harian',cashbook:'Buku Kas',savings:'Tabungan',summary:'Ringkasan',reports:'Laporan'};
-const $=s=>document.querySelector(s);
-const money=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(n)||0);
-const num=n=>Number(n)||0;
-const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
-function today(){const d=new Date(),l=new Date(d.getTime()-d.getTimezoneOffset()*60000);return l.toISOString().slice(0,10)}
-function monthStart(){return today().slice(0,8)+'01'}
-function isFriday(v){return v&&new Date(`${v}T00:00:00`).getDay()===5}
-function errorText(e){return e?.message||String(e||'Kesalahan tidak diketahui.')}
-function toast(message,type='info'){let el=$('#toast');if(!el){el=document.createElement('div');el.id='toast';document.body.appendChild(el)}el.className=`toast ${type}`;el.textContent=message;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>el.remove(),4200)}
-const showError=m=>toast(m,'error'),showSuccess=m=>toast(m,'success');
-function requireSupabase(){if(!window.supabaseClient)throw new Error('Supabase belum dikonfigurasi. Isi SUPABASE_URL dan SUPABASE_ANON_KEY di supabase.js.')}
-async function safe(p){const r=await p;if(r.error)throw r.error;return r.data??[]}
-function table(headers,rows,empty='Belum ada data.'){if(!rows.length)return `<div class="empty">${esc(empty)}</div>`;return `<div class="table"><table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c??''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
-function actionButtons(id,kind){return `<div class="row-actions"><button class="mini" data-edit="${esc(id)}" data-kind="${kind}">Edit</button><button class="mini danger" data-delete="${esc(id)}" data-kind="${kind}">Hapus</button></div>`}
-function bindActions(){document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editRecord(b.dataset.kind,b.dataset.edit));document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>deleteRecord(b.dataset.kind,b.dataset.delete))}
-async function deleteRecord(kind,id){if(!confirm('Hapus data ini? Tindakan ini tidak dapat dibatalkan.'))return;const tableName=kind==='transaction'?'putra_transaksi':kind==='saving'?'putra_tabungan':'putra_laporan_harian';try{const {error}=await supabaseClient.from(tableName).delete().eq('id',id);if(error)throw error;showSuccess('Data berhasil dihapus.');await load(kind==='transaction'?'transactions':kind==='saving'?'savings':'daily')}catch(e){showError(`Gagal menghapus: ${errorText(e)}`)}}
-async function editRecord(kind,id){const tableName=kind==='transaction'?'putra_transaksi':kind==='saving'?'putra_tabungan':'putra_laporan_harian';try{const data=await safe(supabaseClient.from(tableName).select('*').eq('id',id).single());if(kind==='transaction'){const form=$('#transactionForm');if(!form)return;$('#editingId').value=data.id;$('#date').value=data.tanggal;$('#jenis').value=data.jenis;$('#kat').value=data.kategori;$('#akun').value=data.akun;$('#nominal').value=data.nominal;$('#ket').value=data.keterangan||'';$('#saveTx').textContent='Update Transaksi';$('#cancelEdit').hidden=false;window.scrollTo({top:0,behavior:'smooth'})}else if(kind==='saving'){if(!$('#savingForm'))return;$('#editingSavingId').value=data.id;$('#sd').value=data.tanggal;$('#sj').value=data.jenis;$('#sn').value=data.nominal;$('#sk').value=data.keterangan||'';$('#saveSaving').textContent='Update Tabungan';$('#cancelSaving').hidden=false;window.scrollTo({top:0,behavior:'smooth'})}else{const map={pendapatan_i:'#p1',pendapatan_ii:'#p2',titipan_i:'#t1',titipan_ii:'#t2',titipan_iii:'#t3',tabungan:'#tb'};$('#editingDailyId').value=data.id;$('#dd').value=data.tanggal;Object.entries(map).forEach(([k,s])=>$(s).value=data[k]||0);$('#saveDaily').textContent='Update Laporan';$('#cancelDaily').hidden=false;window.scrollTo({top:0,behavior:'smooth'})}}catch(e){showError(`Gagal mengambil data: ${errorText(e)}`)}}
-async function start(){try{requireSupabase();const {data,error}=await supabaseClient.auth.getSession();if(error)throw error;if(!data.session){location.href='index.html';return}$('#nav').innerHTML=Object.entries(P).map(([k,v])=>`<button type="button" data-p="${k}">${esc(v)}</button>`).join('');$('#bottom').innerHTML=['home','transactions','daily','savings','summary','reports'].map(k=>`<button type="button" data-p="${k}">${esc(P[k])}</button>`).join('');document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{load(b.dataset.p);$('aside')?.classList.remove('open')});$('#logout').onclick=async()=>{const r=await supabaseClient.auth.signOut();if(r.error)showError(errorText(r.error));else location.href='index.html'};$('#menu').onclick=()=>$('aside').classList.toggle('open');await load('home')}catch(e){$('#app').innerHTML=`<section class="card"><div class="error"><b>Aplikasi belum siap</b><p>${esc(errorText(e))}</p></div></section>`}}
-async function load(p){$('#title').textContent=P[p]||'Beranda';try{if(p==='home')return home();if(p==='transactions')return transactions();if(p==='daily')return daily();if(p==='cashbook')return cashbook();if(p==='savings')return savings();if(p==='summary')return summary();if(p==='reports')return reports()}catch(e){$('#app').innerHTML=`<section class="card"><div class="error"><b>Gagal memuat fitur</b><p>${esc(errorText(e))}</p><button id="retry">Coba lagi</button></div></section>`;$('#retry')?.addEventListener('click',()=>load(p))}}
-async function getTransactions(from=null,to=null){let q=supabaseClient.from('putra_transaksi').select('*').order('tanggal',{ascending:false}).order('created_at',{ascending:false});if(from)q=q.gte('tanggal',from);if(to)q=q.lte('tanggal',to);return safe(q)}
-function totals(data){return data.reduce((a,x)=>{if(x.jenis==='pemasukan')a.in+=num(x.nominal);else a.out+=num(x.nominal);return a},{in:0,out:0})}
-async function home(){const data=await getTransactions();const t=totals(data);const m=data.filter(x=>x.tanggal>=monthStart()&&x.tanggal<=today());const tm=totals(m);const recent=data.slice(0,6);const byCat={};m.filter(x=>x.jenis==='pengeluaran').forEach(x=>byCat[x.kategori]=(byCat[x.kategori]||0)+num(x.nominal));const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,5);const max=Math.max(...cats.map(x=>x[1]),1);$('#app').innerHTML=`<section class="hero"><small>KANTIN UIMSYA PUTRA</small><h1>Dashboard Keuangan 👋</h1><div class="muted">${esc(new Date().toLocaleString('id-ID',{dateStyle:'full',timeStyle:'short'}))}</div></section><div class="grid stats6"><div class="stat"><span>Saldo Saat Ini</span><b>${money(t.in-t.out)}</b></div><div class="stat"><span>Pemasukan Bulan Ini</span><b>${money(tm.in)}</b></div><div class="stat"><span>Pengeluaran Bulan Ini</span><b>${money(tm.out)}</b></div><div class="stat"><span>Selisih Bulan Ini</span><b>${money(tm.in-tm.out)}</b></div><div class="stat"><span>Total Pemasukan</span><b>${money(t.in)}</b></div><div class="stat"><span>Total Pengeluaran</span><b>${money(t.out)}</b></div></div><section class="card"><div class="section-head"><div><small>ANALISIS</small><h2>Pengeluaran Terbesar Bulan Ini</h2></div></div>${cats.length?cats.map(([k,v])=>`<div class="bar-row"><div><span>${esc(k)}</span><b>${money(v)}</b></div><div class="bar"><i style="width:${Math.max(4,v/max*100)}%"></i></div></div>`).join(''):'<div class="empty">Belum ada pengeluaran bulan ini.</div>'}</section><section class="card"><div class="section-head"><div><small>AKTIVITAS</small><h2>Transaksi Terbaru</h2></div><button class="secondary" id="goTx">Lihat semua</button></div>${table(['Tanggal','Kategori','Jenis','Nominal'],recent.map(x=>[esc(x.tanggal),esc(x.kategori),esc(x.jenis),money(x.nominal)]))}</section>`;if($('#goTx')) $('#goTx').onclick=()=>load('transactions')}
-function txForm(data=null){return `<form id="transactionForm" class="form"><input type="hidden" id="editingId" value="${esc(data?.id||'')}"><label>Tanggal<input id="date" type="date" required value="${esc(data?.tanggal||today())}"></label><label>Jenis<select id="jenis"><option value="pemasukan">Pemasukan</option><option value="pengeluaran">Pengeluaran</option></select></label><label>Kategori<select id="kat"><option>Penjualan</option><option>Pembelian</option><option>Operasional</option><option>Transportasi</option><option>Listrik</option><option>Air</option><option>Gaji</option><option>Tabungan</option><option>Lainnya</option></select></label><label>Akun<select id="akun"><option>Kas Kantin</option><option>Bank</option></select></label><label>Nominal<input id="nominal" type="number" min="1" step="1" placeholder="0" required value="${esc(data?.nominal||'')}"></label><label>Keterangan<input id="ket" maxlength="200" placeholder="Keterangan" value="${esc(data?.keterangan||'')}"></label><div class="form-actions"><button id="saveTx" type="submit">${data?'Update Transaksi':'Simpan Transaksi'}</button><button id="cancelEdit" type="button" class="secondary" ${data?'':'hidden'}>Batal Edit</button></div></form>`}
-async function transactions(){let filters=window.txFilters||{from:monthStart(),to:today(),jenis:'',kategori:'',q:''};$('#app').innerHTML=`<section class="card"><div class="section-head"><div><small>KEUANGAN</small><h2>Transaksi Kas</h2></div></div>${txForm()}<div class="filters"><label>Dari<input id="fFrom" type="date" value="${filters.from}"></label><label>Sampai<input id="fTo" type="date" value="${filters.to}"></label><label>Jenis<select id="fJenis"><option value="">Semua</option><option value="pemasukan">Pemasukan</option><option value="pengeluaran">Pengeluaran</option></select></label><label>Kategori<select id="fKat"><option value="">Semua</option><option>Penjualan</option><option>Pembelian</option><option>Operasional</option><option>Transportasi</option><option>Listrik</option><option>Air</option><option>Gaji</option><option>Tabungan</option><option>Lainnya</option></select></label><label class="search">Cari<input id="fQ" placeholder="No transaksi / keterangan"></label><button id="applyFilter">Terapkan</button></div><div id="txStats" class="grid compact"></div><div id="list"></div></section>`;$('#fJenis').value=filters.jenis;$('#fKat').value=filters.kategori;$('#fQ').value=filters.q;$('#transactionForm').onsubmit=saveTransaction;$('#cancelEdit').onclick=()=>transactions();$('#applyFilter').onclick=()=>{window.txFilters={from:$('#fFrom').value,to:$('#fTo').value,jenis:$('#fJenis').value,kategori:$('#fKat').value,q:$('#fQ').value.trim().toLowerCase()};transactions()};await renderTransactions(filters)}
-async function renderTransactions(filters){try{let data=await getTransactions(filters.from,filters.to);if(filters.jenis)data=data.filter(x=>x.jenis===filters.jenis);if(filters.kategori)data=data.filter(x=>x.kategori===filters.kategori);if(filters.q)data=data.filter(x=>(`${x.no_transaksi} ${x.keterangan||''}`).toLowerCase().includes(filters.q));const t=totals(data);$('#txStats').innerHTML=`<div class="stat"><span>Pemasukan</span><b>${money(t.in)}</b></div><div class="stat"><span>Pengeluaran</span><b>${money(t.out)}</b></div><div class="stat"><span>Selisih</span><b>${money(t.in-t.out)}</b></div>`;$('#list').innerHTML=table(['Tanggal','No','Jenis','Kategori','Akun','Nominal','Keterangan','Aksi'],data.map(x=>[esc(x.tanggal),esc(x.no_transaksi),esc(x.jenis),esc(x.kategori),esc(x.akun),money(x.nominal),esc(x.keterangan),actionButtons(x.id,'transaction')]));bindActions()}catch(e){$('#list').innerHTML=`<div class="error">${esc(errorText(e))}</div>`}}
-async function saveTransaction(e){e.preventDefault();const date=$('#date').value,nominal=num($('#nominal').value),id=$('#editingId').value;if(!date||isFriday(date))return showError(!date?'Tanggal wajib diisi.':'Jumat adalah hari libur operasional.');if(nominal<=0)return showError('Nominal harus lebih dari 0.');const b=$('#saveTx');b.disabled=true;try{const payload={tanggal:date,jenis:$('#jenis').value,kategori:$('#kat').value,akun:$('#akun').value,nominal,keterangan:$('#ket').value.trim()};if(id){const {error}=await supabaseClient.from('putra_transaksi').update(payload).eq('id',id);if(error)throw error;showSuccess('Transaksi diperbarui.')}else{payload.unit='putra';payload.no_transaksi=`TRX-${date.replaceAll('-','')}-${String(Date.now()).slice(-6)}`;const {error}=await supabaseClient.from('putra_transaksi').insert(payload);if(error)throw error;showSuccess('Transaksi berhasil disimpan.')}await transactions()}catch(e){showError(`Gagal menyimpan: ${errorText(e)}`);b.disabled=false}}
-async function daily(){let rows=await safe(supabaseClient.from('putra_laporan_harian').select('*').order('tanggal',{ascending:false}));$('#app').innerHTML=`<section class="card"><div class="section-head"><div><small>OPERASIONAL</small><h2>Laporan Harian</h2></div></div><form id="dailyForm" class="form"><input type="hidden" id="editingDailyId"><label>Tanggal<input id="dd" type="date" value="${today()}" required></label><label>Pendapatan I<input id="p1" type="number" min="0"></label><label>Pendapatan II<input id="p2" type="number" min="0"></label><label>Titipan I<input id="t1" type="number" min="0"></label><label>Titipan II<input id="t2" type="number" min="0"></label><label>Titipan III<input id="t3" type="number" min="0"></label><label>Tabungan<input id="tb" type="number" min="0"></label><div class="form-actions"><button id="saveDaily">Simpan Laporan</button><button id="cancelDaily" type="button" class="secondary" hidden>Batal Edit</button></div></form><div class="formula">Total = Pendapatan I + II − Titipan I − II − III − Tabungan</div><div id="dl"></div></section>`;$('#dailyForm').onsubmit=saveDaily;$('#cancelDaily').onclick=()=>daily();$('#dl').innerHTML=table(['Tanggal','Pendapatan','Titipan','Tabungan','Total','Aksi'],rows.map(x=>[esc(x.tanggal),money(num(x.pendapatan_i)+num(x.pendapatan_ii)),money(num(x.titipan_i)+num(x.titipan_ii)+num(x.titipan_iii)),money(x.tabungan),money(x.total),actionButtons(x.id,'daily')]));bindActions()}
-async function saveDaily(e){e.preventDefault();const date=$('#dd').value;if(!date||isFriday(date))return showError(!date?'Tanggal wajib diisi.':'Jumat adalah hari libur operasional.');const n=id=>Math.max(0,num($(id).value));const p={tanggal:date,pendapatan_i:n('#p1'),pendapatan_ii:n('#p2'),titipan_i:n('#t1'),titipan_ii:n('#t2'),titipan_iii:n('#t3'),tabungan:n('#tb')};p.total=p.pendapatan_i+p.pendapatan_ii-p.titipan_i-p.titipan_ii-p.titipan_iii-p.tabungan;const id=$('#editingDailyId').value,b=$('#saveDaily');b.disabled=true;try{if(id){const {error}=await supabaseClient.from('putra_laporan_harian').update(p).eq('id',id);if(error)throw error}else{p.unit='putra';const {error}=await supabaseClient.from('putra_laporan_harian').insert(p);if(error)throw error}showSuccess(id?'Laporan diperbarui.':'Laporan berhasil disimpan.');await daily()}catch(e){showError(errorText(e));b.disabled=false}}
-async function cashbook(){const data=await getTransactions();let saldo=0;const rows=[...data].sort((a,b)=>a.tanggal.localeCompare(b.tanggal)||String(a.created_at).localeCompare(String(b.created_at))).map(x=>{const masuk=x.jenis==='pemasukan'?num(x.nominal):0,keluar=x.jenis==='pengeluaran'?num(x.nominal):0;saldo+=masuk-keluar;return [esc(x.tanggal),esc(x.no_transaksi),esc(x.keterangan||x.kategori),money(masuk),money(keluar),money(saldo)]});$('#app').innerHTML=`<section class="card"><div class="section-head"><div><small>KEUANGAN</small><h2>Buku Kas</h2></div><span class="badge">Saldo ${money(saldo)}</span></div>${table(['Tanggal','No','Keterangan','Masuk','Keluar','Saldo'],rows)}</section>`}
-async function savings(){const rows=await safe(supabaseClient.from('putra_tabungan').select('*').order('tanggal',{ascending:false}).order('created_at',{ascending:false}));const balance=rows.reduce((a,x)=>a+(x.jenis==='setoran'?num(x.nominal):-num(x.nominal)),0);$('#app').innerHTML=`<section class="card"><div class="section-head"><div><small>SIMPANAN</small><h2>Tabungan</h2></div><span class="badge">Saldo ${money(balance)}</span></div><form id="savingForm" class="form"><input type="hidden" id="editingSavingId"><label>Tanggal<input id="sd" type="date" value="${today()}" required></label><label>Jenis<select id="sj"><option value="setoran">Setoran</option><option value="penarikan">Penarikan</option></select></label><label>Nominal<input id="sn" type="number" min="1" required></label><label>Keterangan<input id="sk" maxlength="200"></label><div class="form-actions"><button id="saveSaving">Simpan</button><button id="cancelSaving" type="button" class="secondary" hidden>Batal Edit</button></div></form><div id="sl"></div></section>`;$('#savingForm').onsubmit=saveSaving;$('#cancelSaving').onclick=()=>savings();$('#sl').innerHTML=table(['Tanggal','Jenis','Nominal','Keterangan','Aksi'],rows.map(x=>[esc(x.tanggal),esc(x.jenis),money(x.nominal),esc(x.keterangan),actionButtons(x.id,'saving')]));bindActions()}
-async function saveSaving(e){e.preventDefault();const nominal=num($('#sn').value),date=$('#sd').value;if(!date||nominal<=0)return showError('Tanggal dan nominal wajib diisi.');const p={tanggal:date,jenis:$('#sj').value,nominal,keterangan:$('#sk').value.trim()},id=$('#editingSavingId').value,b=$('#saveSaving');b.disabled=true;try{let r;if(id)r=await supabaseClient.from('putra_tabungan').update(p).eq('id',id);else{p.unit='putra';r=await supabaseClient.from('putra_tabungan').insert(p)}if(r.error)throw r.error;showSuccess(id?'Tabungan diperbarui.':'Tabungan berhasil disimpan.');await savings()}catch(e){showError(errorText(e));b.disabled=false}}
-async function summary(){const data=await getTransactions();const months={};data.forEach(x=>{const m=x.tanggal.slice(0,7);months[m]??={in:0,out:0};months[m][x.jenis==='pemasukan'?'in':'out']+=num(x.nominal)});const keys=Object.keys(months).sort().slice(-6);$('#app').innerHTML=`<section class="card"><div class="section-head"><div><small>RINGKASAN</small><h2>Performa 6 Bulan Terakhir</h2></div></div>${table(['Bulan','Pemasukan','Pengeluaran','Selisih'],keys.reverse().map(k=>[esc(k),money(months[k].in),money(months[k].out),money(months[k].in-months[k].out)]))}</section>`}
-async function reports(){const d=window.reportFilters||{from:monthStart(),to:today()};$('#app').innerHTML=`<section class="card"><div class="section-head"><div><small>DOKUMEN</small><h2>Laporan & Export</h2></div></div><div class="filters"><label>Dari<input id="rFrom" type="date" value="${d.from}"></label><label>Sampai<input id="rTo" type="date" value="${d.to}"></label><button id="rApply">Tampilkan</button></div><div id="reportBody"></div><div class="report-actions"><button id="csv">Export CSV</button><button id="printBtn">Cetak B5</button></div></section>`;$('#rApply').onclick=()=>{window.reportFilters={from:$('#rFrom').value,to:$('#rTo').value};reports()};await renderReport(d);$('#printBtn').onclick=()=>window.print();$('#csv').onclick=()=>exportCsv(d)}
-async function renderReport(d){const data=await getTransactions(d.from,d.to),t=totals(data);$('#reportBody').innerHTML=`<div class="grid compact"><div class="stat"><span>Pemasukan</span><b>${money(t.in)}</b></div><div class="stat"><span>Pengeluaran</span><b>${money(t.out)}</b></div><div class="stat"><span>Saldo/selisih</span><b>${money(t.in-t.out)}</b></div></div>${table(['Tanggal','No','Jenis','Kategori','Akun','Nominal','Keterangan'],data.map(x=>[esc(x.tanggal),esc(x.no_transaksi),esc(x.jenis),esc(x.kategori),esc(x.akun),money(x.nominal),esc(x.keterangan)]))}`}
-async function exportCsv(d){try{const data=await getTransactions(d.from,d.to),cols=['tanggal','no_transaksi','jenis','kategori','akun','nominal','keterangan'];const csv='\ufeff'+[cols.join(','),...data.map(x=>cols.map(k=>`"${String(x[k]??'').replaceAll('"','""')}"`).join(','))].join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`laporan-putra-${d.from}-${d.to}.csv`;document.body.appendChild(a);a.click();a.remove();showSuccess('CSV berhasil dibuat.')}catch(e){showError(`Export gagal: ${errorText(e)}`)}}
-start();
+// ─── NAVIGASI ────────────────────────────────────────────────────────────────
+const P = {
+  home:         'Beranda',
+  transactions: 'Transaksi',
+  daily:        'Laporan Harian',
+  cashbook:     'Buku Kas',
+  savings:      'Tabungan',
+  kategori:     'Rekap Kategori',   // BARU
+  summary:      'Ringkasan',
+  reports:      'Laporan'
+};
+
+// ─── UTILITAS ─────────────────────────────────────────────────────────────────
+const $ = (s) => document.querySelector(s);
+
+const money = (n) =>
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0
+  }).format(Number(n) || 0);
+
+const esc = (v) =>
+  String(v ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+
+function today() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function isFriday(value) {
+  return new Date(`${value}T00:00:00`).getDay() === 5;
+}
+
+function table(headers, rows, empty = 'Belum ada data.') {
+  if (!rows.length) return `<div class="empty">${esc(empty)}</div>`;
+  return `<div class="table"><table>
+    <thead><tr>${headers.map((x) => `<th>${esc(x)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map((r) => `<tr>${r.map((x) => `<td>${x ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function toast(message, type = 'info') {
+  let el = $('#toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    document.body.appendChild(el);
+  }
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => el.remove(), 4500);
+}
+
+function showError(message)   { toast(message, 'error'); }
+function showSuccess(message) { toast(message, 'success'); }
+
+function errorText(error) {
+  if (!error) return 'Terjadi kesalahan yang tidak diketahui.';
+  if (error.message) return error.message;
+  return String(error);
+}
+
+function requireSupabase() {
+  if (!window.supabaseClient) {
+    throw new Error(
+      'Supabase belum dikonfigurasi. Buka supabase.js lalu isi SUPABASE_URL dan SUPABASE_ANON_KEY.'
+    );
+  }
+}
+
+async function safeQuery(queryPromise) {
+  const result = await queryPromise;
+  if (result.error) throw result.error;
+  return result.data ?? [];
+}
+
+// ─── START ────────────────────────────────────────────────────────────────────
+async function start() {
+  try {
+    requireSupabase();
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    if (!data.session) { location.href = 'index.html'; return; }
+
+    // Sidebar nav (semua halaman)
+    $('#nav').innerHTML = Object.entries(P)
+      .map(([k, v]) => `<button type="button" data-p="${k}">${esc(v)}</button>`)
+      .join('');
+
+    // Bottom nav mobile (6 item paling sering dipakai)
+    $('#bottom').innerHTML = ['home', 'transactions', 'daily', 'savings', 'kategori', 'reports']
+      .map((k) => `<button type="button" data-p="${k}">${esc(P[k])}</button>`)
+      .join('');
+
+    document.querySelectorAll('[data-p]').forEach((b) => {
+      b.addEventListener('click', () => {
+        load(b.dataset.p);
+        document.querySelector('aside')?.classList.remove('open');
+      });
+    });
+
+    $('#logout').addEventListener('click', async () => {
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) return showError(errorText(error));
+      location.href = 'index.html';
+    });
+
+    $('#menu').addEventListener('click', () => $('aside').classList.toggle('open'));
+
+    await load('home');
+  } catch (error) {
+    $('#app').innerHTML = `<section class="card"><div class="error"><b>Aplikasi belum siap</b><p>${esc(errorText(error))}</p></div></section>`;
+  }
+}
+
+async function load(p) {
+  $('#title').textContent = P[p] || 'Beranda';
+
+  // Hancurkan chart sebelumnya agar tidak konflik dengan Chart.js
+  if (window.__chartInstance) {
+    window.__chartInstance.destroy();
+    window.__chartInstance = null;
+  }
+
+  try {
+    if (p === 'home')         return await home();
+    if (p === 'transactions') return await transactions();
+    if (p === 'daily')        return await daily();
+    if (p === 'cashbook')     return await cashbook();
+    if (p === 'savings')      return await savings();
+    if (p === 'kategori')     return await categoryBreakdown(); // BARU
+    if (p === 'summary')      return await summary();
+    if (p === 'reports')      return await reports();
+  } catch (error) {
+    $('#app').innerHTML = `<section class="card"><div class="error"><b>Gagal memuat fitur</b><p>${esc(errorText(error))}</p><button type="button" id="retry">Coba lagi</button></div></section>`;
+    $('#retry')?.addEventListener('click', () => load(p));
+  }
+}
+
+// ─── BERANDA — dengan Grafik Tren + Target Bulanan ───────────────────────────
+async function home() {
+  $('#app').innerHTML = `
+    <section class="hero">
+      <small>KANTIN UIMSYA PUTRA</small>
+      <h1>Selamat datang 👋</h1>
+      <div>${esc(new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' }))}</div>
+    </section>
+
+    <div id="stats" class="grid"></div>
+
+    <section class="card">
+      <div class="section-head">
+        <div><small>TREN</small><h2>Grafik Keuangan</h2></div>
+        <select id="chartRange" style="width:auto">
+          <option value="6">6 Bulan</option>
+          <option value="3">3 Bulan</option>
+          <option value="12">12 Bulan</option>
+        </select>
+      </div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><small>TARGET</small><h2>Target Pemasukan Bulan Ini</h2></div>
+        <button type="button" id="editTargetBtn">Ubah Target</button>
+      </div>
+      <div id="targetContent"></div>
+    </section>`;
+
+  // Ambil semua data transaksi
+  const data = await safeQuery(
+    supabaseClient.from('putra_transaksi').select('tanggal,jenis,nominal')
+  );
+
+  // ── Stat total ──
+  let totalIncome = 0, totalExpense = 0;
+  data.forEach((x) => {
+    if (x.jenis === 'pemasukan') totalIncome  += Number(x.nominal) || 0;
+    else                         totalExpense += Number(x.nominal) || 0;
+  });
+
+  $('#stats').innerHTML = `
+    <div class="stat"><span>Pemasukan</span><b>${money(totalIncome)}</b></div>
+    <div class="stat"><span>Pengeluaran</span><b>${money(totalExpense)}</b></div>
+    <div class="stat"><span>Saldo Kas</span><b>${money(totalIncome - totalExpense)}</b></div>`;
+
+  // ── Grafik tren ──
+  function renderChart(nMonths) {
+    if (window.__chartInstance) {
+      window.__chartInstance.destroy();
+      window.__chartInstance = null;
+    }
+
+    // Kelompokkan per bulan
+    const byMonth = {};
+    data.forEach(x => {
+      const m = x.tanggal.slice(0, 7);
+      if (!byMonth[m]) byMonth[m] = { pemasukan: 0, pengeluaran: 0 };
+      byMonth[m][x.jenis] += Number(x.nominal) || 0;
+    });
+
+    const months = Object.keys(byMonth).sort().slice(-nMonths);
+    if (!months.length) {
+      const canvas = $('#trendChart');
+      if (canvas) canvas.closest('.card').querySelector('h2').insertAdjacentHTML(
+        'afterend', '<p class="muted">Belum ada data transaksi untuk ditampilkan.</p>'
+      );
+      return;
+    }
+
+    if (typeof Chart === 'undefined') return; // Chart.js belum load
+
+    const labels = months.map(m => {
+      const [y, mo] = m.split('-');
+      return new Date(y, mo - 1).toLocaleString('id-ID', { month: 'short', year: '2-digit' });
+    });
+
+    window.__chartInstance = new Chart($('#trendChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Pemasukan',
+            data: months.map(m => byMonth[m]?.pemasukan || 0),
+            backgroundColor: '#4a8c5c',
+            borderRadius: 6
+          },
+          {
+            label: 'Pengeluaran',
+            data: months.map(m => byMonth[m]?.pengeluaran || 0),
+            backgroundColor: '#c0392b',
+            borderRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${money(ctx.raw)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: { callback: v => `${(v / 1000000).toFixed(0)}jt` },
+            grid: { color: '#d8e4d5' }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  renderChart(6);
+  $('#chartRange')?.addEventListener('change', (e) => renderChart(Number(e.target.value)));
+
+  // ── Target bulanan ──
+  const TARGET_KEY = 'target_bulanan_putra';
+  let target = Number(localStorage.getItem(TARGET_KEY)) || 0;
+
+  function renderTarget() {
+    const currentMonth = today().slice(0, 7);
+    const monthIncome = data
+      .filter(x => x.jenis === 'pemasukan' && x.tanggal.startsWith(currentMonth))
+      .reduce((s, x) => s + (Number(x.nominal) || 0), 0);
+
+    if (!target) {
+      $('#targetContent').innerHTML = `<p class="muted">Belum ada target. Klik "Ubah Target" untuk menetapkan target pemasukan bulan ini.</p>`;
+      return;
+    }
+
+    const pct = Math.min(100, Math.round(monthIncome / target * 100));
+    const color = pct >= 100 ? '#4a8c5c' : pct >= 70 ? '#738a6e' : '#c0392b';
+    const msg   = pct >= 100
+      ? '🎉 Target bulan ini sudah tercapai!'
+      : `Sisa ${money(target - monthIncome)} lagi untuk mencapai target.`;
+
+    $('#targetContent').innerHTML = `
+      <div class="target-info">
+        <span class="muted">${money(monthIncome)} dari ${money(target)}</span>
+        <b style="color:${color}">${pct}%</b>
+      </div>
+      <div class="progress-bg">
+        <div class="progress-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <p class="muted" style="margin-top:8px;font-size:13px">${msg}</p>`;
+  }
+
+  renderTarget();
+
+  $('#editTargetBtn').addEventListener('click', () => {
+    const val = prompt('Masukkan target pemasukan bulan ini (angka tanpa titik/koma):', target || '');
+    if (val === null) return;
+    const n = Number(String(val).replace(/[^0-9]/g, ''));
+    if (!Number.isFinite(n) || n < 0) return showError('Nominal tidak valid.');
+    localStorage.setItem(TARGET_KEY, n);
+    target = n;
+    renderTarget();
+    showSuccess('Target berhasil diperbarui.');
+  });
+}
+
+// ─── TRANSAKSI — dengan Filter Bulan/Jenis/Cari + Hapus ─────────────────────
+async function transactions() {
+  const thisMonth = today().slice(0, 7);
+
+  $('#app').innerHTML = `
+    <section class="card">
+      <div class="section-head"><div><small>KEUANGAN</small><h2>Transaksi Kas</h2></div></div>
+
+      <form id="transactionForm" class="form">
+        <label>Tanggal<input id="date" type="date" required></label>
+        <label>Jenis<select id="jenis">
+          <option value="pemasukan">Pemasukan</option>
+          <option value="pengeluaran">Pengeluaran</option>
+        </select></label>
+        <label>Kategori<select id="kat">
+          <option>Penjualan</option><option>Pembelian</option><option>Operasional</option>
+          <option>Transportasi</option><option>Listrik</option><option>Air</option>
+          <option>Gaji</option><option>Lainnya</option>
+        </select></label>
+        <label>Akun<select id="akun"><option>Kas Kantin</option><option>Bank</option></select></label>
+        <label>Nominal<input id="nominal" type="number" min="1" step="1" placeholder="Rp 0" required></label>
+        <label>Keterangan<input id="ket" maxlength="200" placeholder="Keterangan"></label>
+        <div class="form-actions"><button type="submit">Simpan Transaksi</button></div>
+      </form>
+
+      <div class="filter-row">
+        <label>Bulan<input id="filterBulan" type="month" value="${esc(thisMonth)}"></label>
+        <label>Jenis<select id="filterJenis">
+          <option value="semua">Semua</option>
+          <option value="pemasukan">Pemasukan</option>
+          <option value="pengeluaran">Pengeluaran</option>
+        </select></label>
+        <label>Cari<input id="search" placeholder="Keterangan / kategori..."></label>
+        <button type="button" id="applyFilter" class="btn-apply">Terapkan</button>
+      </div>
+
+      <div id="filterSummary"></div>
+      <div id="list"></div>
+    </section>`;
+
+  $('#date').value = today();
+
+  // ── Render daftar transaksi sesuai filter ──
+  async function loadList() {
+    const bulan  = $('#filterBulan').value;
+    const jenis  = $('#filterJenis').value;
+    const search = ($('#search').value || '').trim().toLowerCase();
+
+    let q = supabaseClient.from('putra_transaksi').select('*')
+      .order('tanggal',    { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (bulan) {
+      const [y, m] = bulan.split('-');
+      const lastDay = new Date(y, m, 0).getDate();
+      q = q.gte('tanggal', `${bulan}-01`).lte('tanggal', `${bulan}-${lastDay}`);
+    }
+    if (jenis !== 'semua') q = q.eq('jenis', jenis);
+
+    try {
+      let data = await safeQuery(q);
+
+      // Filter lokal (keterangan/kategori tidak bisa difilter di Supabase tanpa full-text)
+      if (search) data = data.filter(x =>
+        (x.keterangan || '').toLowerCase().includes(search) ||
+        (x.kategori   || '').toLowerCase().includes(search)
+      );
+
+      // Ringkasan filter
+      const totalIn  = data.filter(x => x.jenis === 'pemasukan').reduce((s, x) => s + Number(x.nominal), 0);
+      const totalOut = data.filter(x => x.jenis === 'pengeluaran').reduce((s, x) => s + Number(x.nominal), 0);
+      $('#filterSummary').innerHTML = `
+        <div class="fs-row">
+          <div class="fs-item fs-in"><span>Pemasukan</span><b>${money(totalIn)}</b></div>
+          <div class="fs-item fs-out"><span>Pengeluaran</span><b>${money(totalOut)}</b></div>
+          <div class="fs-item"><span>Selisih</span><b>${money(totalIn - totalOut)}</b></div>
+        </div>`;
+
+      if (!data.length) {
+        $('#list').innerHTML = `<div class="empty">Belum ada data sesuai filter.</div>`;
+        return;
+      }
+
+      // Tabel dengan badge jenis + tombol hapus
+      $('#list').innerHTML = `<div class="table"><table>
+        <thead><tr>
+          <th>Tanggal</th><th>No</th><th>Jenis</th><th>Kategori</th><th>Nominal</th><th>Aksi</th>
+        </tr></thead>
+        <tbody>
+          ${data.map(x => `
+            <tr data-id="${esc(x.id)}">
+              <td>${esc(x.tanggal)}</td>
+              <td><small>${esc(x.no_transaksi)}</small></td>
+              <td><span class="badge ${x.jenis === 'pemasukan' ? 'badge-in' : 'badge-out'}">${esc(x.jenis)}</span></td>
+              <td>${esc(x.kategori)}</td>
+              <td>${money(x.nominal)}</td>
+              <td><button type="button" class="btn-del" data-id="${esc(x.id)}" title="Hapus transaksi ini">🗑️</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table></div>`;
+    } catch (error) {
+      $('#list').innerHTML = `<div class="error">Gagal memuat transaksi: ${esc(errorText(error))}</div>`;
+    }
+  }
+
+  // ── Form simpan ──
+  $('#transactionForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const date    = $('#date').value;
+    const nominal = Number($('#nominal').value);
+
+    if (isFriday(date)) return showError('Jumat adalah hari libur operasional.');
+    if (!date)          return showError('Tanggal wajib diisi.');
+    if (!Number.isFinite(nominal) || nominal <= 0) return showError('Nominal harus lebih dari 0.');
+
+    const button = e.submitter;
+    button.disabled = true;
+    try {
+      const payload = {
+        unit: 'putra',
+        tanggal: date,
+        jenis: $('#jenis').value,
+        kategori: $('#kat').value,
+        akun: $('#akun').value,
+        nominal,
+        keterangan: $('#ket').value.trim(),
+        no_transaksi: `TRX-${Date.now()}`
+      };
+      const { error } = await supabaseClient.from('putra_transaksi').insert(payload);
+      if (error) throw error;
+      showSuccess('Transaksi berhasil disimpan.');
+      e.target.reset();
+      $('#date').value = today();
+      await loadList();
+    } catch (error) {
+      showError(`Transaksi gagal disimpan: ${errorText(error)}`);
+      button.disabled = false;
+    }
+  });
+
+  // ── Filter ──
+  $('#applyFilter').addEventListener('click', loadList);
+  $('#search').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadList(); });
+
+  // ── Hapus transaksi (event delegation di container #list) ──
+  // Delegasi ke #list agar tidak perlu re-attach setiap kali loadList() dipanggil
+  $('#list').addEventListener('click', async (e) => {
+    // Klik tombol hapus pertama kali → tampilkan konfirmasi inline
+    const delBtn = e.target.closest('.btn-del');
+    if (delBtn) {
+      const id = delBtn.dataset.id;
+      const td = delBtn.closest('td');
+      td.innerHTML = `
+        <div class="del-confirm">
+          <span>Hapus?</span>
+          <button type="button" class="btn-del-confirm" data-id="${esc(id)}">Ya</button>
+          <button type="button" class="btn-del-cancel" data-id="${esc(id)}">Tidak</button>
+        </div>`;
+      return;
+    }
+
+    // Batal → kembalikan tombol hapus
+    const cancelBtn = e.target.closest('.btn-del-cancel');
+    if (cancelBtn) {
+      const id = cancelBtn.dataset.id;
+      cancelBtn.closest('td').innerHTML =
+        `<button type="button" class="btn-del" data-id="${esc(id)}" title="Hapus transaksi ini">🗑️</button>`;
+      return;
+    }
+
+    // Konfirmasi Ya → hapus dari Supabase
+    const confirmBtn = e.target.closest('.btn-del-confirm');
+    if (confirmBtn) {
+      const id = confirmBtn.dataset.id;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = '...';
+      try {
+        const { error } = await supabaseClient.from('putra_transaksi').delete().eq('id', id);
+        if (error) throw error;
+        showSuccess('Transaksi berhasil dihapus.');
+        await loadList();
+      } catch (error) {
+        showError(`Hapus gagal: ${errorText(error)}`);
+        await loadList();
+      }
+    }
+  });
+
+  await loadList();
+}
+
+// ─── LAPORAN HARIAN ──────────────────────────────────────────────────────────
+async function daily() {
+  $('#app').innerHTML = `
+    <section class="card">
+      <div class="section-head"><div><small>OPERASIONAL</small><h2>Laporan Harian</h2></div></div>
+      <form id="dailyForm" class="form daily-form">
+        <label>Tanggal<input id="dd" type="date" required></label>
+        <label>Pendapatan I<input id="p1" type="number" min="0" step="1" placeholder="0"></label>
+        <label>Pendapatan II<input id="p2" type="number" min="0" step="1" placeholder="0"></label>
+        <label>Titipan I<input id="t1" type="number" min="0" step="1" placeholder="0"></label>
+        <label>Titipan II<input id="t2" type="number" min="0" step="1" placeholder="0"></label>
+        <label>Titipan III<input id="t3" type="number" min="0" step="1" placeholder="0"></label>
+        <label>Tabungan<input id="tb" type="number" min="0" step="1" placeholder="0"></label>
+        <div class="form-actions"><button type="submit">Simpan Laporan</button></div>
+      </form>
+      <div class="formula">Total = Pendapatan I + Pendapatan II − Titipan I − Titipan II − Titipan III − Tabungan</div>
+      <div id="dl"></div>
+    </section>`;
+
+  $('#dd').value = today();
+
+  $('#dailyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const date = $('#dd').value;
+    if (!date)          return showError('Tanggal wajib diisi.');
+    if (isFriday(date)) return showError('Jumat adalah hari libur operasional.');
+
+    const n = (id) => Math.max(0, Number($(id).value) || 0);
+    const payload = {
+      unit: 'putra',
+      tanggal: date,
+      pendapatan_i:   n('#p1'),
+      pendapatan_ii:  n('#p2'),
+      titipan_i:      n('#t1'),
+      titipan_ii:     n('#t2'),
+      titipan_iii:    n('#t3'),
+      tabungan:       n('#tb')
+    };
+    payload.total =
+      payload.penda

@@ -1,3 +1,4 @@
+/* ─── RESET & BASE ──────────────────────────────────────────────────────────── */
 *{box-sizing:border-box}
 :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#344c3d;background:#f5f9f3}
 html{min-width:0}
@@ -5,6 +6,8 @@ body{margin:0;min-width:0;background:#f5f9f3}
 button,input,select{font:inherit}
 button{cursor:pointer}
 button:disabled{opacity:.6;cursor:not-allowed}
+
+/* ─── LAYOUT ────────────────────────────────────────────────────────────────── */
 aside{position:fixed;left:0;top:0;bottom:0;width:245px;padding:22px;background:#344c3d;color:#fff;z-index:20;overflow-y:auto}
 .side-brand{display:flex;align-items:center;gap:10px}
 .side-brand small{display:block;opacity:.75}
@@ -17,12 +20,16 @@ header{position:fixed;left:245px;right:0;top:0;height:65px;background:#fff;borde
 header .online{float:right;color:#738a6e;font-size:14px}
 #menu{display:none;margin-right:12px;padding:7px 10px;border:1px solid #cbdac8;border-radius:9px;background:#fff}
 main{margin-left:245px;padding:90px 28px 40px;max-width:1500px}
+
+/* ─── CARDS & GRID ──────────────────────────────────────────────────────────── */
 .hero,.card,.stat{background:#fff;border:1px solid #d8e4d5;border-radius:22px;padding:24px;box-shadow:0 10px 30px #344c3d18;margin-bottom:18px}
 .hero h1{margin:7px 0}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
 .stat b{display:block;font-size:25px;margin-top:8px;overflow-wrap:anywhere}
 .section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}
 .section-head h2{margin:4px 0 0}
+
+/* ─── FORMS ─────────────────────────────────────────────────────────────────── */
 .form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .form label,.login-form label{display:grid;gap:6px;font-size:13px;font-weight:700;min-width:0}
 .form input,.form select,.form button,.login-form input,button{width:100%;min-width:0;padding:12px;border:1px solid #cbdac8;border-radius:11px;background:white;color:#344c3d}
@@ -31,28 +38,256 @@ main{margin-left:245px;padding:90px 28px 40px;max-width:1500px}
 .form-actions{grid-column:1/-1}
 .form-actions button,.login-form button{background:#344c3d;color:#fff;border-color:#344c3d;font-weight:700}
 .formula{margin-top:14px;padding:12px 14px;border-radius:12px;background:#f1f6ef;color:#526a57;font-size:13px;line-height:1.5}
+
+/* ─── TABLES ────────────────────────────────────────────────────────────────── */
 .table{width:100%;overflow-x:auto;margin-top:20px;border:1px solid #d8e4d5;border-radius:14px}
 table{width:100%;border-collapse:collapse;min-width:720px}
 th,td{padding:11px;border-bottom:1px solid #d8e4d5;text-align:left;white-space:nowrap}
 th{background:#bfcfbb}
 tbody tr:last-child td{border-bottom:0}
 .empty{padding:25px;margin-top:20px;text-align:center;border:1px dashed #cbdac8;border-radius:14px;color:#738a6e}
+.muted{color:#738a6e}
+
+/* ─── ERRORS ────────────────────────────────────────────────────────────────── */
 .error{padding:14px;background:#ffe7e7;color:#9b3333;border:1px solid #f2bcbc;border-radius:12px}
 .error p{margin:6px 0 12px}
 .error button{max-width:150px;background:#9b3333;color:#fff;border-color:#9b3333}
-.muted{color:#738a6e}
-.report-actions{display:flex;gap:10px;flex-wrap:wrap}
-.report-actions button{width:auto;padding-inline:18px}
+
+/* ─── TOAST ─────────────────────────────────────────────────────────────────── */
 .toast{position:fixed;right:20px;bottom:20px;z-index:1000;max-width:min(420px,calc(100vw - 40px));padding:13px 16px;border-radius:12px;box-shadow:0 10px 30px #0002;font-weight:600}
-.toast.error{background:#ffe2e2;color:#8d2d2d}
+.toast.error  {background:#ffe2e2;color:#8d2d2d}
 .toast.success{background:#e4f4e3;color:#285d32}
-.toast.info{background:#e8f0e7;color:#344c3d}
+.toast.info   {background:#e8f0e7;color:#344c3d}
+
+/* ─── LOGIN ─────────────────────────────────────────────────────────────────── */
 .login{display:grid;place-items:center;min-height:100vh;padding:20px}
 .login-card{width:min(440px,100%);margin:0}
 .login-card h1{margin-bottom:5px}
 .login-form{display:grid;gap:13px;margin-top:20px}
 .login-form #msg{color:#9b3333;line-height:1.4;min-height:20px}
 footer{display:none}
+
+/* ─── LAPORAN ────────────────────────────────────────────────────────────────── */
+.report-actions{display:flex;gap:10px;flex-wrap:wrap}
+.report-actions button{width:auto;padding-inline:18px}
+
+/* ══════════════════════════════════════════════════════════
+   FITUR BARU 1: GRAFIK TREN — Chart.js wrapper
+══════════════════════════════════════════════════════════ */
+.chart-wrap{
+  position:relative;
+  width:100%;
+  min-height:220px;
+  margin-top:4px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FITUR BARU 2: TARGET BULANAN — progress bar
+══════════════════════════════════════════════════════════ */
+.target-info{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+  font-size:14px;
+}
+.target-info b{font-size:18px}
+
+.progress-bg{
+  width:100%;
+  height:14px;
+  background:#d8e4d5;
+  border-radius:8px;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  border-radius:8px;
+  transition:width .5s ease;
+  min-width:4px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FITUR BARU 3: FILTER TRANSAKSI
+══════════════════════════════════════════════════════════ */
+.filter-row{
+  display:grid;
+  grid-template-columns:1fr 1fr 2fr auto;
+  gap:12px;
+  align-items:end;
+  margin-top:24px;
+  padding:16px;
+  background:#f5f9f3;
+  border:1px solid #d8e4d5;
+  border-radius:14px;
+}
+.filter-row label{
+  display:grid;
+  gap:5px;
+  font-size:12px;
+  font-weight:700;
+  min-width:0;
+}
+.filter-row input,
+.filter-row select{
+  padding:10px 12px;
+  border:1px solid #cbdac8;
+  border-radius:10px;
+  font-size:13px;
+  color:#344c3d;
+  background:#fff;
+  outline:none;
+  width:100%;
+}
+.filter-row input:focus,
+.filter-row select:focus{
+  border-color:#738a6e;
+  box-shadow:0 0 0 3px #738a6e22;
+}
+.btn-apply{
+  padding:10px 18px !important;
+  background:#344c3d !important;
+  color:#fff !important;
+  border-color:#344c3d !important;
+  font-weight:700;
+  border-radius:10px;
+  width:auto !important;
+  white-space:nowrap;
+}
+.btn-apply:hover{background:#2a3d2d !important}
+
+/* Ringkasan hasil filter */
+.fs-row{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-top:16px;
+}
+.fs-item{
+  padding:10px 14px;
+  border-radius:12px;
+  background:#f5f9f3;
+  border:1px solid #d8e4d5;
+}
+.fs-item span{display:block;font-size:11px;color:#738a6e;margin-bottom:3px}
+.fs-item b{font-size:14px;font-weight:700}
+.fs-in{background:#f0f9f2}
+.fs-in b{color:#2d7a3a}
+.fs-out{background:#fff5f5}
+.fs-out b{color:#b83232}
+
+/* ══════════════════════════════════════════════════════════
+   FITUR BARU 4: BADGE JENIS TRANSAKSI
+══════════════════════════════════════════════════════════ */
+.badge{
+  display:inline-block;
+  padding:3px 9px;
+  border-radius:6px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.3px;
+}
+.badge-in {background:#e6f4ea;color:#2d7a3a}
+.badge-out{background:#fce8e8;color:#b83232}
+
+/* ══════════════════════════════════════════════════════════
+   FITUR BARU 5: HAPUS TRANSAKSI
+══════════════════════════════════════════════════════════ */
+.btn-del{
+  padding:6px 9px !important;
+  border-radius:8px !important;
+  border:1px solid #f2bcbc !important;
+  background:#fff5f5 !important;
+  color:#b83232;
+  width:auto !important;
+  font-size:14px;
+  line-height:1;
+  transition:background .15s;
+}
+.btn-del:hover{background:#fce8e8 !important}
+
+.del-confirm{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+.del-confirm>span{font-size:12px;color:#9b3333;font-weight:600}
+
+.btn-del-confirm{
+  padding:5px 11px !important;
+  border-radius:7px !important;
+  border:none !important;
+  background:#c0392b !important;
+  color:#fff !important;
+  font-size:12px;
+  font-weight:700;
+  width:auto !important;
+}
+.btn-del-confirm:hover{background:#9b3333 !important}
+
+.btn-del-cancel{
+  padding:5px 9px !important;
+  border-radius:7px !important;
+  border:1px solid #cbdac8 !important;
+  background:#fff !important;
+  color:#344c3d !important;
+  font-size:12px;
+  width:auto !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   FITUR BARU 6: REKAP KATEGORI
+══════════════════════════════════════════════════════════ */
+.cat-month-select{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.cat-month-select input{
+  padding:8px 12px;
+  border:1px solid #cbdac8;
+  border-radius:10px;
+  font-size:13px;
+  color:#344c3d;
+  outline:none;
+}
+
+.cat-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+  margin-top:8px;
+}
+
+.cat-sub{
+  font-size:14px;
+  font-weight:700;
+  margin:0 0 14px;
+  padding-bottom:8px;
+  border-bottom:1px solid #d8e4d5;
+}
+
+.cat-bar-row{margin-bottom:12px}
+.cat-bar-label{
+  display:flex;
+  justify-content:space-between;
+  font-size:13px;
+  margin-bottom:5px;
+}
+.cat-bar-label>span:first-child{font-weight:600}
+
+.cat-total{
+  margin-top:14px;
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+}
+.cat-total-out{background:#fff5f5;color:#b83232}
+.cat-total-in {background:#f0f9f2;color:#2d7a3a}
+
+/* ─── RESPONSIVE MOBILE ─────────────────────────────────────────────────────── */
 @media(max-width:800px){
   aside{transform:translateX(-105%);transition:transform .2s;width:270px;box-shadow:10px 0 30px #0003}
   aside.open{transform:none}
@@ -65,6 +300,23 @@ footer{display:none}
   .form{grid-template-columns:1fr;gap:11px}
   .form-actions{grid-column:auto}
   .table{margin-top:15px}
+
+  /* Filter row pada mobile: stack ke 2 kolom */
+  .filter-row{
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .filter-row label:nth-child(3){grid-column:1/-1}
+  .btn-apply{grid-column:1/-1}
+
+  /* Ringkasan filter */
+  .fs-row{grid-template-columns:1fr}
+
+  /* Rekap kategori */
+  .cat-grid{grid-template-columns:1fr;gap:16px}
+  .cat-month-select{flex-wrap:wrap}
+
+  /* Bottom nav */
   footer{position:fixed;display:grid;grid-template-columns:repeat(6,1fr);gap:2px;bottom:max(7px,env(safe-area-inset-bottom));left:7px;right:7px;background:#344c3d;border-radius:17px;padding:6px;z-index:18;box-shadow:0 8px 25px #0003}
   footer button{background:transparent;color:#fff;border:0;font-size:10px;padding:8px 2px;border-radius:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   footer button:active{background:#738a6e}
@@ -74,9 +326,11 @@ footer{display:none}
   .toast{left:15px;right:15px;bottom:85px;max-width:none}
 }
 @media(min-width:801px){footer{display:none}}
+
+/* ─── PRINT ──────────────────────────────────────────────────────────────────── */
 @media print{
   @page{size:B5 portrait;margin:10mm}
-  aside,header,footer,button,.form,.report-actions,.toast{display:none!important}
+  aside,header,footer,button,.form,.report-actions,.toast,.filter-row,.fs-row,.chart-wrap,.cat-month-select{display:none!important}
   main{margin:0;padding:0}
   .card{box-shadow:none;border:0}
   .table{overflow:visible;border:0}

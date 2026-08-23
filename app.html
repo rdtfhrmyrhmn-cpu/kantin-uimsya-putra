@@ -4,26 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#344c3d">
-  <title>Kantin Uimsya Putra</title>
+  <title>Kantin Uimsya Putra — Laporan</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js untuk grafik tren (Fitur Baru) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="supabase.js"></script>
 </head>
 <body>
   <aside>
-    <div class="side-brand"><div class="brand">UP</div><div><b>KANTIN UIMSYA</b><small>PUTRA</small></div></div>
-    <nav id="nav" aria-label="Navigasi"></nav>
-    <button id="logout" type="button">Keluar</button>
+    <div class="side-brand">
+      <div class="brand">UP</div>
+      <div><b>Uimsya Putra</b><small>Laporan Keuangan</small></div>
+    </div>
+    <nav id="nav"></nav>
+    <button type="button" id="logout">Keluar</button>
   </aside>
-
   <header>
-    <button id="menu" type="button" aria-label="Buka menu">☰</button>
-    <b id="title">Beranda</b>
+    <button type="button" id="menu">☰</button>
+    <span id="title">Beranda</span>
     <span class="online">● Online</span>
   </header>
-
-  <main id="app"></main>
-  <footer id="bottom" aria-label="Navigasi mobile"></footer>
-  <script src="app.js"></script>
+  <main>
+    <div id="app"></div>
+  </main>
+  <footer id="bottom"></footer>
+  <script src="app.js" defer></script>
 </body>
 </html>
