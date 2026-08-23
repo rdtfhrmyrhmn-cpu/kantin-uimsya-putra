@@ -1,29 +1,23 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#344c3d">
-  <title>Kantin Uimsya Putra</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f5132"><title>Kantin UIMSYA Pro</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="supabase.js"></script>
 </head>
 <body>
-  <aside>
-    <div class="side-brand"><div class="brand">UP</div><div><b>KANTIN UIMSYA</b><small>PUTRA</small></div></div>
-    <nav id="nav" aria-label="Navigasi"></nav>
-    <button id="logout" type="button">Keluar</button>
-  </aside>
-
-  <header>
-    <button id="menu" type="button" aria-label="Buka menu">☰</button>
-    <b id="title">Beranda</b>
-    <span class="online">● Online</span>
-  </header>
-
-  <main id="app"></main>
-  <footer id="bottom" aria-label="Navigasi mobile"></footer>
-  <script src="app.js"></script>
-</body>
-</html>
+<aside id="sidebar">
+ <div class="side-brand"><div class="brand-mark small">UP</div><div><b>KANTIN UIMSYA</b><small>PUTRA • PRO</small></div></div>
+ <nav id="nav"></nav>
+ <div class="side-bottom"><div class="user-chip"><span id="avatar">A</span><div><b id="userName">Operator</b><small>Authenticated</small></div></div><button id="logout" class="ghost-light">↪ Keluar</button></div>
+</aside>
+<header class="topbar"><button id="menu" class="icon-btn">☰</button><div><b id="pageTitle">Dashboard</b><small id="pageSub">Ringkasan keuangan</small></div><div class="top-actions"><span class="live-dot">● Online</span><button id="refresh" class="icon-btn" title="Refresh">↻</button></div></header>
+<main id="app"></main>
+<div id="overlay"></div>
+<nav id="bottomNav"></nav>
+<div id="toastRoot"></div>
+<script src="app.js"></script>
+</body></html>
